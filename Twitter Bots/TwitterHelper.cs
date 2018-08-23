@@ -493,11 +493,18 @@ namespace Twitter_Bots
             Console.WriteLine("Getting collection's contents...");
             foreach (var tweet in tweets)
             {
-                ITweet fullTweet = Tweet.GetTweet(long.Parse(tweet["tweet"]["id"].ToString()));
-
-                if (fullTweet != null)
+                try
                 {
-                    tweetList.Add(fullTweet.TweetDTO);
+                    ITweet fullTweet = Tweet.GetTweet(long.Parse(tweet["tweet"]["id"].ToString()));
+
+                    if (fullTweet != null)
+                    {
+                        tweetList.Add(fullTweet.TweetDTO);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
                 }
             }
 
