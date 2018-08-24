@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using Tweetinvi;
 using Tweetinvi.Models;
@@ -452,18 +453,54 @@ namespace Twitter_Bots
             }
         }
 
-        public void DumpAllMedia(IAuthenticatedUser authenticatedUser, string userToDump, int? amountToDump = null)
+        /// <summary>
+        /// Dumps all of a user's media into the /Images/ folder. 
+        /// (( Can eat disk space quickly ))
+        /// </summary>
+        public async void DumpAllMedia(IAuthenticatedUser authenticatedUser, string userToDump, int? amountToDump = null)
         {
-            IEnumerable<ITweet> tweets = GetTimelineEntries(authenticatedUser.ScreenName);
-            foreach (ITweet t in tweets)
+            IEnumerable<ITweet> tweets = GetTimelineEntries(userToDump);
+            foreach (ITweet t in tweets.Where(t => t.Media.Any()))
             {
-                try
+                foreach (var media in t.Media)
                 {
-                    // TODO
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
+                    try
+                    {
+                        string imageUrl = media.MediaURLHttps;
+                        string saveLocation = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()))
+                                    + @"\Twitter Bots\Twitter Bots\Data\Images\"
+                                    + media.MediaURLHttps.Split('/').Last();
+
+                        byte[] imageBytes;
+                        HttpWebRequest imageRequest = (HttpWebRequest)WebRequest.Create(imageUrl);
+                        WebResponse imageResponse = await imageRequest.GetResponseAsync();
+
+                        System.IO.Stream responseStream = imageResponse.GetResponseStream();
+
+                        using (BinaryReader br = new BinaryReader(responseStream))
+                        {
+                            imageBytes = br.ReadBytes(500000);
+                            br.Dispose();
+                        }
+                        responseStream.Dispose();
+                        imageResponse.Dispose();
+
+                        FileStream fs = new FileStream(saveLocation, FileMode.Create);
+                        BinaryWriter bw = new BinaryWriter(fs);
+                        try
+                        {
+                            bw.Write(imageBytes);
+                        }
+                        finally
+                        {
+                            fs.Dispose();
+                            bw.Dispose();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
                 }
             }
 
@@ -482,7 +519,7 @@ namespace Twitter_Bots
             List<ITweetDTO> tweetList = new List<ITweetDTO>();
             filename = (!string.IsNullOrWhiteSpace(filename)) ? filename : "Collection-" + collectionId;
             var path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()))
-                                + @"\Twitter Bots\Twitter Bots\Data\"
+                                + @"\Twitter Bots\Twitter Bots\Data\Files\"
                                 + filename
                                 + ".json";
 
